@@ -735,85 +735,86 @@ onUnmounted(() => {
       </main>
     </div>
     
-    <!-- Onboarding Modal - Seleção de Categorias -->
-    <Teleport to="body">
-      <div v-if="showOnboardingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-        <div class="relative glass-card rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <div class="text-center mb-6">
-            <div class="text-5xl mb-3">🎯</div>
-            <h2 class="text-2xl font-bold text-white mb-2">Personalize seu Feed</h2>
-            <p class="text-white/60">Selecione até 6 categorias que mais te interessam</p>
-            <p class="text-white/40 text-sm mt-1">Isso ajuda a criar seu feed "For You" personalizado</p>
-          </div>
-          
-          <!-- Categorias Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-            <button
-              v-for="cat in categories"
-              :key="cat.id"
-              @click="toggleOnboardingCategory(cat.id)"
-              :class="[
-                'p-4 rounded-xl border-2 transition-all text-left',
-                selectedOnboardingCategories.includes(cat.id)
-                  ? 'border-purple-500 bg-purple-500/20 text-purple-300'
-                  : 'border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:bg-white/10'
-              ]"
-            >
-              <div class="font-medium">{{ cat.name }}</div>
-              <div class="text-xs opacity-60 mt-1">{{ cat.description || 'Notícias sobre ' + cat.name }}</div>
-            </button>
-          </div>
-          
-          <!-- Selecionadas -->
-          <div class="mb-6 p-3 rounded-lg bg-white/5">
-            <div class="text-sm text-white/50 mb-2">
-              Selecionadas: {{ selectedOnboardingCategories.length }}/6
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <span 
-                v-for="catId in selectedOnboardingCategories" 
-                :key="catId"
-                class="px-3 py-1 rounded-full bg-purple-500/30 text-purple-300 text-sm"
-              >
-                {{ categories.find(c => c.id === catId)?.name }}
-                <button @click="toggleOnboardingCategory(catId)" class="ml-1 hover:text-white">×</button>
-              </span>
-              <span v-if="selectedOnboardingCategories.length === 0" class="text-white/30 text-sm">
-                Nenhuma categoria selecionada
-              </span>
-            </div>
-          </div>
-          
-          <!-- Botões -->
-          <div class="flex gap-3">
-            <button 
-              @click="skipOnboarding"
-              class="flex-1 px-4 py-3 rounded-lg bg-white/10 text-white/70 hover:bg-white/20"
-            >
-              Pular
-            </button>
-            <button 
-              @click="saveOnboardingPreferences"
-              :disabled="selectedOnboardingCategories.length === 0"
-              :class="[
-                'flex-1 px-4 py-3 rounded-lg font-medium transition-all',
-                selectedOnboardingCategories.length > 0
-                  ? 'bg-purple-500 text-white hover:bg-purple-600'
-                  : 'bg-white/10 text-white/30 cursor-not-allowed'
-              ]"
-            >
-              Começar com {{ selectedOnboardingCategories.length }} categoria{{ selectedOnboardingCategories.length !== 1 ? 's' : '' }}
-            </button>
-          </div>
-          
-          <p class="text-xs text-white/40 text-center mt-4">
-            Você pode mudar suas preferências a qualquer momento
-          </p>
-        </div>
-      </div>
-    </Teleport>
   </div>
+  
+  <!-- Onboarding Modal - Seleção de Categorias (FORA do v-if/v-else para sempre estar disponível) -->
+  <Teleport to="body">
+    <div v-if="showOnboardingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+      <div class="relative glass-card rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="text-center mb-6">
+          <div class="text-5xl mb-3">🎯</div>
+          <h2 class="text-2xl font-bold text-white mb-2">Personalize seu Feed</h2>
+          <p class="text-white/60">Selecione até 6 categorias que mais te interessam</p>
+          <p class="text-white/40 text-sm mt-1">Isso ajuda a criar seu feed "For You" personalizado</p>
+        </div>
+        
+        <!-- Categorias Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            @click="toggleOnboardingCategory(cat.id)"
+            :class="[
+              'p-4 rounded-xl border-2 transition-all text-left',
+              selectedOnboardingCategories.includes(cat.id)
+                ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                : 'border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:bg-white/10'
+            ]"
+          >
+            <div class="font-medium">{{ cat.name }}</div>
+            <div class="text-xs opacity-60 mt-1">{{ cat.description || 'Notícias sobre ' + cat.name }}</div>
+          </button>
+        </div>
+        
+        <!-- Selecionadas -->
+        <div class="mb-6 p-3 rounded-lg bg-white/5">
+          <div class="text-sm text-white/50 mb-2">
+            Selecionadas: {{ selectedOnboardingCategories.length }}/6
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span 
+              v-for="catId in selectedOnboardingCategories" 
+              :key="catId"
+              class="px-3 py-1 rounded-full bg-purple-500/30 text-purple-300 text-sm"
+            >
+              {{ categories.find(c => c.id === catId)?.name }}
+              <button @click="toggleOnboardingCategory(catId)" class="ml-1 hover:text-white">×</button>
+            </span>
+            <span v-if="selectedOnboardingCategories.length === 0" class="text-white/30 text-sm">
+              Nenhuma categoria selecionada
+            </span>
+          </div>
+        </div>
+        
+        <!-- Botões -->
+        <div class="flex gap-3">
+          <button 
+            @click="skipOnboarding"
+            class="flex-1 px-4 py-3 rounded-lg bg-white/10 text-white/70 hover:bg-white/20"
+          >
+            Pular
+          </button>
+          <button 
+            @click="saveOnboardingPreferences"
+            :disabled="selectedOnboardingCategories.length === 0"
+            :class="[
+              'flex-1 px-4 py-3 rounded-lg font-medium transition-all',
+              selectedOnboardingCategories.length > 0
+                ? 'bg-purple-500 text-white hover:bg-purple-600'
+                : 'bg-white/10 text-white/30 cursor-not-allowed'
+            ]"
+          >
+            Começar com {{ selectedOnboardingCategories.length }} categoria{{ selectedOnboardingCategories.length !== 1 ? 's' : '' }}
+          </button>
+        </div>
+        
+        <p class="text-xs text-white/40 text-center mt-4">
+          Você pode mudar suas preferências a qualquer momento
+        </p>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style>
