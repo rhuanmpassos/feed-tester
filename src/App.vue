@@ -179,6 +179,8 @@ async function endSession() {
 // ========== JWT AUTH ==========
 async function handleLogin({ email, password }) {
   authError.value = ''
+  // CORRIGIDO: Limpa dados do usuário anterior antes de fazer login (mas mantém logs)
+  clearUserData()
   try {
     addLog('info', 'Fazendo login...')
     const res = await fetch(`${GATEWAY_URL}/api/auth/login`, {
@@ -225,6 +227,8 @@ async function handleLogin({ email, password }) {
 
 async function handleRegister({ name, email, password }) {
   authError.value = ''
+  // CORRIGIDO: Limpa dados do usuário anterior antes de criar novo (mas mantém logs)
+  clearUserData()
   try {
     addLog('info', 'Criando conta...')
     const res = await fetch(`${GATEWAY_URL}/api/auth/register`, {
@@ -371,30 +375,62 @@ async function loadUserData() {
   }
 }
 
-function clearUser() {
+// Limpa dados do usuário (sem limpar logs) - usado antes de login/registro
+function clearUserData() {
   endSession()
   
+  // Limpa autenticação
   authToken.value = null
   currentUserId.value = null
   currentUserName.value = ''
   currentUserEmail.value = ''
   currentSessionId.value = null
+  pendingUserId.value = null
   
+  // Limpa localStorage
   localStorage.removeItem('auth_token')
   localStorage.removeItem('test_user_id')
   localStorage.removeItem('user_name')
   localStorage.removeItem('user_email')
+  localStorage.removeItem('has_session')
   
+  // Limpa dados do usuário
   userPreferences.value = []
   userStats.value = null
   userProfile.value = null
   userPatterns.value = null
+  
+  // Limpa feeds
+  feedItems.value = []
   forYouItems.value = []
+  breakingNews.value = []
+  
+  // Limpa interações pendentes e tracking
+  interactionQueue.value = []
   likedItems.value = new Set()
   bookmarkedItems.value = new Set()
-  feedMode.value = 'chronological'
+  viewStartTimes.value.clear()
+  impressionsSent.value.clear()
+  scrollStopTimers.value.clear()
   
-  addLog('info', '👋 Logout realizado')
+  // Limpa intervalos
+  if (interactionInterval.value) {
+    clearInterval(interactionInterval.value)
+    interactionInterval.value = null
+  }
+  if (statsRefreshInterval.value) {
+    clearInterval(statsRefreshInterval.value)
+    statsRefreshInterval.value = null
+  }
+  
+  // Reset feed mode
+  feedMode.value = 'chronological'
+}
+
+// Logout completo (limpa tudo incluindo logs)
+function clearUser() {
+  clearUserData()
+  addLog('info', '👋 Logout realizado - dados limpos')
 }
 
 // ========== INTERACTION TRACKING ==========
