@@ -605,7 +605,7 @@ async function loadForYouFeed() {
   if (!currentUserId.value) return
 
   try {
-    addLog('info', '🔥 Carregando feed For You...')
+    addLog('info', '🔥 Carregando feed For You (80% preferências + 20% descoberta)...')
     const res = await fetch(`${GATEWAY_URL}/api/feeds/for-you?user_id=${currentUserId.value}&limit=50`, { headers: getAuthHeaders() })
     const data = await res.json()
     
@@ -622,10 +622,19 @@ async function loadForYouFeed() {
         siteName: article.site_name,
         category: article.category_name ? { id: article.category_id, name: article.category_name, slug: article.category_slug } : null,
         publishedAt: article.published_at,
-        score: article.score,
-        displayMetadata: article.display_metadata
+        // Novos campos do sistema hierárquico
+        score: article.score || article.relevance_score,
+        explanation: article.explanation || article.display?.explanation,
+        isExploration: article.is_exploration || article.is_wildcard,
+        feedType: article.feed_type,
+        display: article.display
       }))
-      addLog('success', `🔥 For You: ${forYouItems.value.length} artigos`)
+      
+      // Conta exploration vs exploitation
+      const explorationCount = forYouItems.value.filter(i => i.isExploration).length
+      const exploitCount = forYouItems.value.length - explorationCount
+      addLog('success', `🔥 For You: ${forYouItems.value.length} artigos (${exploitCount} baseados em preferências, ${explorationCount} descoberta)`)
+      
       impressionsSent.value.clear()
       observeFeedCards()
     }
@@ -895,15 +904,11 @@ onUnmounted(() => {
                     :item="item" 
                     :liked="likedItems.has(item.id)"
                     :bookmarked="bookmarkedItems.has(item.id)"
+                    :showScore="feedMode === 'for-you'"
                     @like="handleLike"
                     @bookmark="handleBookmark"
                     @share="handleShare"
                   />
-                  <div v-if="item.score || item.explanation" class="mt-1 px-4 text-xs text-white/30 flex items-center gap-2">
-                    <span v-if="item.score">Score: {{ (item.score * 100).toFixed(1) }}%</span>
-                    <span v-if="item.isExploration" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">🔍 Descoberta</span>
-                    <span v-if="item.explanation" class="text-white/40">{{ item.explanation }}</span>
-                  </div>
                 </div>
               </TransitionGroup>
               
