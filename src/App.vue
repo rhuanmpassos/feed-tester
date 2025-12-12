@@ -758,8 +758,11 @@ function updateFilters(newFilters) {
 // Watch feed mode
 watch(feedMode, (newMode) => {
   impressionsSent.value.clear()
-  if (newMode === 'for-you') loadForYouFeed()
-  else observeFeedCards()
+  if (newMode === 'for-you') {
+    loadForYouFeed()
+  } else {
+    observeFeedCards()
+  }
 })
 
 // ========== LIFECYCLE ==========
@@ -874,11 +877,14 @@ onUnmounted(() => {
             </div>
             
             <div v-if="feedMode === 'for-you' && userPreferences.length > 0" class="glass-card rounded-xl p-4">
-              <h3 class="text-sm font-medium text-white/70 mb-2">🎯 Preferências</h3>
+              <h3 class="text-sm font-medium text-white/70 mb-2">🎯 Suas Preferências (80% do feed)</h3>
               <div class="flex flex-wrap gap-2">
                 <span v-for="pref in userPreferences.slice(0, 8)" :key="pref.category_id" class="px-2 py-1 rounded-lg text-xs" :style="{ backgroundColor: `rgba(147, 51, 234, ${pref.preference_score * 0.5})` }">
                   {{ pref.category_name }}: {{ (pref.preference_score * 100).toFixed(0) }}%
                 </span>
+              </div>
+              <div class="mt-2 text-xs text-white/40">
+                20% do feed = descoberta de novos interesses 🔍
               </div>
             </div>
             
@@ -893,8 +899,10 @@ onUnmounted(() => {
                     @bookmark="handleBookmark"
                     @share="handleShare"
                   />
-                  <div v-if="item.score" class="mt-1 px-4 text-xs text-white/30">
-                    Score: {{ (item.score * 100).toFixed(1) }}%
+                  <div v-if="item.score || item.explanation" class="mt-1 px-4 text-xs text-white/30 flex items-center gap-2">
+                    <span v-if="item.score">Score: {{ (item.score * 100).toFixed(1) }}%</span>
+                    <span v-if="item.isExploration" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">🔍 Descoberta</span>
+                    <span v-if="item.explanation" class="text-white/40">{{ item.explanation }}</span>
                   </div>
                 </div>
               </TransitionGroup>
