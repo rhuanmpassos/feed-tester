@@ -332,6 +332,23 @@ async function loadUserData() {
     const prefsData = await prefsRes.json()
     if (prefsData.success) {
       userPreferences.value = prefsData.data || []
+      
+      // CORRIGIDO: Atualiza filtros do WebSocket com categorias escolhidas pelo usuário
+      // Isso garante que o feed cronológico mostre apenas categorias do onboarding
+      if (userPreferences.value.length > 0) {
+        const userCategorySlugs = userPreferences.value
+          .map(p => p.category_slug)
+          .filter(Boolean)
+        
+        if (userCategorySlugs.length > 0) {
+          filters.value.categories = userCategorySlugs
+          // Se WebSocket estiver conectado, atualiza filtros
+          if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+            ws.value.send(JSON.stringify({ action: 'subscribe', filters: filters.value }))
+            addLog('info', `🔍 Filtros atualizados: ${userCategorySlugs.length} categorias do onboarding`)
+          }
+        }
+      }
     }
 
     // Stats
@@ -771,7 +788,13 @@ function connect() {
     wsStatus.value = 'connected'
     addLog('success', 'Conectado ao Gateway!')
     
-    ws.value.send(JSON.stringify({ action: 'subscribe', filters: filters.value }))
+    // CORRIGIDO: Se estiver no modo cronológico, usa categorias do usuário
+    // Se não tiver categorias do usuário, usa filtros vazios (mostra tudo até ter preferências)
+    const filtersToSend = feedMode.value === 'chronological' && userPreferences.value.length > 0
+      ? { categories: userPreferences.value.map(p => p.category_slug).filter(Boolean) }
+      : filters.value
+    
+    ws.value.send(JSON.stringify({ action: 'subscribe', filters: filtersToSend }))
     ws.value.send(JSON.stringify({ action: 'get_history', limit: 50 }))
   }
   
@@ -867,6 +890,15 @@ watch(feedMode, (newMode) => {
   if (newMode === 'for-you') {
     loadForYouFeed()
   } else {
+    // CORRIGIDO: No modo cronológico, atualiza filtros do WebSocket com categorias do usuário
+    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+      const filtersToSend = userPreferences.value.length > 0
+        ? { categories: userPreferences.value.map(p => p.category_slug).filter(Boolean) }
+        : { categories: [] }
+      
+      ws.value.send(JSON.stringify({ action: 'subscribe', filters: filtersToSend }))
+      addLog('info', `📋 Modo cronológico: ${filtersToSend.categories.length} categorias do onboarding`)
+    }
     observeFeedCards()
   }
 })
