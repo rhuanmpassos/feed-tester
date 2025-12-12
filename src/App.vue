@@ -69,6 +69,19 @@ function getAuthHeaders() {
   return headers
 }
 
+// Helper para verificar se erro indica usuário não encontrado
+function isUserNotFoundError(data) {
+  return data?.code === 'USER_NOT_FOUND' || 
+         data?.error?.includes('foreign key constraint') ||
+         data?.error?.includes('user_id_fkey')
+}
+
+// Handler centralizado para erro de usuário não encontrado
+function handleUserNotFoundError() {
+  addLog('error', '⚠️ Sessão inválida - usuário não encontrado. Fazendo logout...')
+  clearUser()
+}
+
 // Computed
 const displayItems = computed(() => {
   if (feedMode.value === 'for-you') {
@@ -132,6 +145,13 @@ async function startSession() {
     if (data.success) {
       localStorage.setItem('has_session', 'true')
       addLog('success', `🎬 Sessão iniciada: ${currentSessionId.value.slice(0, 8)}...`)
+    } else {
+      // Se o usuário não existe mais, força logout
+      if (isUserNotFoundError(data)) {
+        handleUserNotFoundError()
+        return
+      }
+      addLog('error', 'Erro ao iniciar sessão', data.error)
     }
   } catch (e) {
     addLog('error', 'Erro ao iniciar sessão', e.message)
@@ -474,24 +494,39 @@ async function handleLike(item) {
   const isLiked = likedItems.value.has(item.id)
   
   try {
+    let res
     if (isLiked) {
-      await fetch(`${GATEWAY_URL}/api/articles/${articleId}/like?user_id=${currentUserId.value}`, {
+      res = await fetch(`${GATEWAY_URL}/api/articles/${articleId}/like?user_id=${currentUserId.value}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       })
-      likedItems.value.delete(item.id)
-      addLog('info', '💔 Like removido')
     } else {
-      await fetch(`${GATEWAY_URL}/api/articles/${articleId}/like`, {
+      res = await fetch(`${GATEWAY_URL}/api/articles/${articleId}/like`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ user_id: parseInt(currentUserId.value) })
       })
-      likedItems.value.add(item.id)
-      trackInteraction(item.id, 'like')
-      addLog('success', '⭐ Artigo curtido!')
     }
-    sendInteractions()
+    
+    const data = await res.json()
+    
+    // Se o usuário não existe mais, força logout
+    if (isUserNotFoundError(data)) {
+      handleUserNotFoundError()
+      return
+    }
+    
+    if (data.success !== false) {
+      if (isLiked) {
+        likedItems.value.delete(item.id)
+        addLog('info', '💔 Like removido')
+      } else {
+        likedItems.value.add(item.id)
+        trackInteraction(item.id, 'like')
+        addLog('success', '⭐ Artigo curtido!')
+      }
+      sendInteractions()
+    }
   } catch (e) {
     addLog('error', 'Erro ao curtir', e.message)
   }
@@ -504,24 +539,39 @@ async function handleBookmark(item) {
   const isBookmarked = bookmarkedItems.value.has(item.id)
   
   try {
+    let res
     if (isBookmarked) {
-      await fetch(`${GATEWAY_URL}/api/bookmark/${item.id}`, {
+      res = await fetch(`${GATEWAY_URL}/api/bookmark/${item.id}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       })
-      bookmarkedItems.value.delete(item.id)
-      addLog('info', '🗑️ Bookmark removido')
     } else {
-      await fetch(`${GATEWAY_URL}/api/bookmark`, {
+      res = await fetch(`${GATEWAY_URL}/api/bookmark`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ id: item.id, user_id: parseInt(currentUserId.value) })
       })
-      bookmarkedItems.value.add(item.id)
-      trackInteraction(item.id, 'bookmark')
-      addLog('success', '🔖 Artigo salvo!')
     }
-    sendInteractions()
+    
+    const data = await res.json()
+    
+    // Se o usuário não existe mais, força logout
+    if (isUserNotFoundError(data)) {
+      handleUserNotFoundError()
+      return
+    }
+    
+    if (data.success !== false) {
+      if (isBookmarked) {
+        bookmarkedItems.value.delete(item.id)
+        addLog('info', '🗑️ Bookmark removido')
+      } else {
+        bookmarkedItems.value.add(item.id)
+        trackInteraction(item.id, 'bookmark')
+        addLog('success', '🔖 Artigo salvo!')
+      }
+      sendInteractions()
+    }
   } catch (e) {
     addLog('error', 'Erro ao salvar', e.message)
   }
@@ -574,6 +624,13 @@ async function sendInteractions() {
       addLog('success', `✅ ${interactions.length} interações enviadas`)
       refreshUserStats()
     } else {
+      // Se o usuário não existe mais, força logout
+      if (isUserNotFoundError(data)) {
+        handleUserNotFoundError()
+        return
+      }
+      // Outros erros: recoloca na fila para tentar novamente
+      addLog('error', `Erro ao enviar interações: ${data.error || 'erro desconhecido'}`)
       interactionQueue.value.push(...interactions)
     }
   } catch (e) {
